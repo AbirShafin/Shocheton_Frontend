@@ -20,7 +20,7 @@ export function FactCheckForm({ onSubmit, loading }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit({ text: mode === "text" ? text : "", file: mode === "file" ? file : null });
+    onSubmit({ text, file: mode === "file" ? file : null });
   };
 
   const handleFile = (f: File | undefined) => {
@@ -91,59 +91,69 @@ export function FactCheckForm({ onSubmit, loading }: Props) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
+              className="flex flex-col gap-4"
             >
-              <input
-                ref={inputRef}
-                type="file"
-                accept="application/pdf"
-                className="hidden"
-                onChange={(e) => handleFile(e.target.files?.[0])}
-              />
-              {!file ? (
-                <button
-                  type="button"
-                  onClick={() => inputRef.current?.click()}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragging(true);
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragging(false);
-                    handleFile(e.dataTransfer.files?.[0]);
-                  }}
-                  className={cn(
-                    "w-full rounded-xl border border-dashed py-12 flex flex-col items-center gap-2 transition-colors",
-                    dragging
-                      ? "border-accent bg-accent/5"
-                      : "border-border-strong hover:border-accent hover:bg-surface",
-                  )}
-                >
-                  <Upload className="h-6 w-6 text-muted-foreground" />
-                  <div className="text-sm text-foreground">Drop a PDF here or click to upload</div>
-                  <div className="text-xs text-muted-foreground font-mono">PDF · max 20MB</div>
-                </button>
-              ) : (
-                <div className="flex items-center gap-3 rounded-xl border border-border-strong bg-card p-4">
-                  <div className="rounded-lg border border-border bg-surface p-2.5">
-                    <FileText className="h-5 w-5 text-accent" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{file.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {(file.size / 1024).toFixed(1)} KB
-                    </div>
-                  </div>
+              <div>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => handleFile(e.target.files?.[0])}
+                />
+                {!file ? (
                   <button
                     type="button"
-                    onClick={() => setFile(null)}
-                    className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    onClick={() => inputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragging(true);
+                    }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragging(false);
+                      handleFile(e.dataTransfer.files?.[0]);
+                    }}
+                    className={cn(
+                      "w-full rounded-xl border border-dashed py-12 flex flex-col items-center gap-2 transition-colors",
+                      dragging
+                        ? "border-accent bg-accent/5"
+                        : "border-border-strong hover:border-accent hover:bg-surface",
+                    )}
                   >
-                    <X className="h-4 w-4" />
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <div className="text-sm text-foreground">Drop a PDF here or click to upload</div>
+                    <div className="text-xs text-muted-foreground font-mono">PDF · max 20MB</div>
                   </button>
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-center gap-3 rounded-xl border border-border-strong bg-card p-4 mb-2">
+                    <div className="rounded-lg border border-border bg-surface p-2.5">
+                      <FileText className="h-5 w-5 text-accent" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{file.name}</div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFile(null)}
+                      className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Optional context (e.g., 'Check the claims in Section 2')..."
+                rows={3}
+                className="w-full bg-surface/50 text-foreground placeholder:text-muted-foreground/60 text-sm leading-relaxed border border-border rounded-lg p-3 resize-none focus:outline-none focus:border-accent transition-colors"
+              />
             </motion.div>
           )}
         </AnimatePresence>

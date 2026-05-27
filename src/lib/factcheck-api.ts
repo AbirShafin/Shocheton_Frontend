@@ -66,7 +66,7 @@ export async function runFactCheck(input: FactCheckInput): Promise<FactCheckResu
     callEndpoint<AgentResponse>("/agent2", payload),
   ]);
   const moderator = await callEndpoint<ModeratorResponse>("/moderator", {
-    input: input.text ?? (input.file ? `[file: ${input.file.name}]` : ""),
+    input: (input.text && input.file) ? `${input.text} [file: ${input.file.name}]` : (input.text || (input.file ? `[file: ${input.file.name}]` : "")),
     agent1,
     agent2,
   });
