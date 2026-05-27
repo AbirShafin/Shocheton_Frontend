@@ -1,4 +1,4 @@
-# Fact-Fluent Insight
+
 
 A modern, fast, and responsive frontend for a multi-agent AI debate system that verifies claims and surfaces verdicts with sources. Built with React, Vite, TanStack Router/Start, and Tailwind CSS.
 
