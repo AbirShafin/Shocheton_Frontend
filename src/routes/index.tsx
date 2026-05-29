@@ -163,7 +163,7 @@ function Index() {
     try {
       const data = await callEndpoint({
         rawText: input.text,
-        pdf: input.file !== null,
+        pdf: input.file ? true : false,
         pdfFile: input.file
       });
       setResult(data);

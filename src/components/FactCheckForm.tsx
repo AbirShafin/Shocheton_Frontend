@@ -15,16 +15,19 @@ export function FactCheckForm({ onSubmit, loading }: Props) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const canSubmit = !loading && (mode === "text" ? text.trim().length > 4 : !!file);
+  const canSubmit = !loading && (mode === "text" ? text.trim().length > 4 : (file && (text.trim().length > 4)));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit({ text, file: mode === "file" ? file : null });
+    onSubmit({ text, file: mode === "file" ? file : null});
   };
 
   const handleFile = (f: File | undefined) => {
     if (!f) return;
+    if (f.size > (4 * 1024 * 1024)) {
+      return;
+    }
     if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) return;
     setFile(f);
   };
@@ -124,7 +127,7 @@ export function FactCheckForm({ onSubmit, loading }: Props) {
                   >
                     <Upload className="h-6 w-6 text-muted-foreground" />
                     <div className="text-sm text-foreground">Drop a PDF here or click to upload</div>
-                    <div className="text-xs text-muted-foreground font-mono">PDF · max 20MB</div>
+                    <div className="text-xs text-muted-foreground font-mono">PDF · max 4MB</div>
                   </button>
                 ) : (
                   <div className="flex items-center gap-3 rounded-xl border border-border-strong bg-card p-4 mb-2">
@@ -150,7 +153,7 @@ export function FactCheckForm({ onSubmit, loading }: Props) {
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Optional context (e.g., 'Check the claims in Section 2')..."
+                placeholder="Claim to verify inside PDF (e.g., 'Check the claims in Section 2')..."
                 rows={3}
                 className="w-full bg-surface/50 text-foreground placeholder:text-muted-foreground/60 text-sm leading-relaxed border border-border rounded-lg p-3 resize-none focus:outline-none focus:border-accent transition-colors"
               />
