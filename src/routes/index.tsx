@@ -5,7 +5,133 @@ import { Loader2, ShieldCheck, Network, Scale } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { FactCheckForm } from "@/components/FactCheckForm";
 import { ResultsPanel } from "@/components/ResultsPanel";
-import { runFactCheck, buildMockResult, type FactCheckResult } from "@/lib/factcheck-api";
+import { type BackendAgentState, callEndpoint } from "@/lib/factcheck-api"; // 🎯 Imported your verified callEndpoint here
+
+
+export const mockBackendAgentState: BackendAgentState = {
+  raw_input_text: "Bangladesh is the richest country in the world.",
+  isolated_claim: "Bangladesh is the richest country in the world.",
+  category: "general",
+  
+  // Accumulated pool of all sources found during background lookups
+  retrieved_evidence: [
+    {
+      title: "World Bank Data - GDP Rankings By Country",
+      url: "https://data.worldbank.org/indicator/NY.GDP.MKTP.CD",
+      origin: "General Web Search",
+      credibility_percentage: 98,
+      extracted_snippet: "In nominal terms, Bangladesh represents the 34th largest economy globally and ranks as the second-largest economic force within South Asia."
+    },
+    {
+      title: "IMF World Economic Outlook Database (2025/2026)",
+      url: "https://www.imf.org/en/Publications/WEO",
+      origin: "Trusted db Scoped Search",
+      credibility_percentage: 95,
+      extracted_snippet: "Global GDP Per Capita (PPP) tracking for 2025 places Liechtenstein, Singapore, and Luxembourg as the top three wealthiest nations. Bangladesh is positioned at 124th globally with a metric of $10,257.55."
+    },
+    {
+      title: "South Asian Economic Metrics Review",
+      url: "https://www.orfonline.org/research/south-asian-metrics",
+      origin: "Trusted db Scoped Search",
+      credibility_percentage: 88,
+      extracted_snippet: "Within the SAARC economic geography, the Maldives maintains the highest regional GDP per capita footprint at roughly $36,065, contrasting with regional growth hubs like India and Bangladesh."
+    }
+  ],
+
+  // Optimistic verification node output
+  agent1_perspective: {
+    verdict: "Refuted",
+    confidence_score: 95,
+    rationale: "While upstream data from the World Bank confirms significant macro growth positioning Bangladesh 34th in nominal global terms, GDP per capita indexes explicitly disprove the claim. It is mathematically impossible to classify it as the richest country when its PPP per capita ranks 124th globally.",
+    cited_sources: [
+      {
+        title: "World Bank Data - GDP Rankings By Country",
+        url: "https://data.worldbank.org/indicator/NY.GDP.MKTP.CD",
+        origin: "General Web Search",
+        credibility_percentage: 98,
+        extracted_snippet: "In nominal terms, Bangladesh represents the 34th largest economy globally and ranks as the second-largest economic force within South Asia."
+      },
+      {
+        title: "IMF World Economic Outlook Database (2025/2026)",
+        url: "https://www.imf.org/en/Publications/WEO",
+        origin: "Trusted db Scoped Search",
+        credibility_percentage: 95,
+        extracted_snippet: "Global GDP Per Capita (PPP) tracking for 2025 places Liechtenstein, Singapore, and Luxembourg as the top three wealthiest nations. Bangladesh is positioned at 124th globally with a metric of $10,257.55."
+      }
+    ]
+  },
+
+  // Hyper-skeptical validation node output
+  agent2_perspective: {
+    verdict: "Refuted",
+    confidence_score: 98,
+    rationale: "The claim is completely divorced from comparative economic telemetry. Synthesis of IMF tracking indicators proves that the world's leading wealth concentrations (Luxembourg, Singapore) outpace Bangladesh's baseline indicators by multiple orders of magnitude. Even internally within South Asia, the Maldives holds a significantly higher per capita share.",
+    cited_sources: [
+      {
+        title: "IMF World Economic Outlook Database (2025/2026)",
+        url: "https://www.imf.org/en/Publications/WEO",
+        origin: "Trusted db Scoped Search",
+        credibility_percentage: 95,
+        extracted_snippet: "Global GDP Per Capita (PPP) tracking for 2025 places Liechtenstein, Singapore, and Luxembourg as the top three wealthiest nations. Bangladesh is positioned at 124th globally with a metric of $10,257.55."
+      },
+      {
+        title: "South Asian Economic Metrics Review",
+        url: "https://www.orfonline.org/research/south-asian-metrics",
+        origin: "Trusted db Scoped Search",
+        credibility_percentage: 88,
+        extracted_snippet: "Within the SAARC economic geography, the Maldives maintains the highest regional GDP per capita footprint at roughly $36,065, contrasting with regional growth hubs like India and Bangladesh."
+      }
+    ]
+  },
+
+  // Transcripts appended by your multi-turn cross-rebuttal graph node
+  debate_transcript: [
+    {
+      speaker: "Agent 1 (Optimist)",
+      content: "Initial structural validation shows Bangladesh possesses massive macro scale as the 34th nominal economy, which might cause raw scale confusion."
+    },
+    {
+      speaker: "Agent 2 (Skeptic)",
+      content: "Macro scale does not equate to absolute wealth status. The specific phrase claims 'richest country'. Per-capita analysis completely decimates this assertion when compared to Luxembourg or even regional actors like the Maldives."
+    },
+    {
+      speaker: "Agent 1 (Optimist)",
+      content: "Agreed. Concluding assessment confirms macro scale is insufficient validation. The assertion is definitively refuted by all standard indices."
+    }
+  ],
+
+  // Chief Moderator Final Evaluation Results
+  final_verdict: "Refuted",
+  final_justification: "The assertion that Bangladesh is the richest country in the world is explicitly contradicted by global economic indicators. Comprehensive telemetry compiled by the IMF positions Luxembourg, Singapore, and Liechtenstein as the world's wealthiest nations by per capita distribution. While tracking records demonstrate that Bangladesh represents a major regional economy (ranking 34th globally in raw nominal GDP output), its purchasing power parity (PPP) per capita metrics place it 124th globally at $10,257.55, thoroughly disproving the claim.",
+  system_confidence: 96,
+
+  // Curated grounding array pulled from the state's global collection
+  final_top_sources: [
+    {
+      title: "IMF World Economic Outlook Database (2025/2026)",
+      url: "https://www.imf.org/en/Publications/WEO",
+      origin: "Trusted db Scoped Search",
+      credibility_percentage: 95,
+      extracted_snippet: "Global GDP Per Capita (PPP) tracking for 2025 places Liechtenstein, Singapore, and Luxembourg as the top three wealthiest nations. Bangladesh is positioned at 124th globally with a metric of $10,257.55."
+    },
+    {
+      title: "World Bank Data - GDP Rankings By Country",
+      url: "https://data.worldbank.org/indicator/NY.GDP.MKTP.CD",
+      origin: "General Web Search",
+      credibility_percentage: 98,
+      extracted_snippet: "In nominal terms, Bangladesh represents the 34th largest economy globally and ranks as the second-largest economic force within South Asia."
+    }
+  ],
+
+  // System parameters, run metrics, and diagnostic tracking
+  metadata: {
+    execution_time_ms: 1842,
+    llm_tokens_used: 3120,
+    chroma_lookup_count: 1,
+    tavily_api_depth: "advanced"
+  }
+};
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,29 +152,30 @@ export const Route = createFileRoute("/")({
   }),
   component: Index,
 });
-
 function Index() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<FactCheckResult | null>(null);
+  const [result, setResult] = useState<BackendAgentState | null>(null);
   const [error, setError] = useState<string | null>(null);
-
   const handleSubmit = async (input: { text: string; file: File | null }) => {
     setLoading(true);
     setError(null);
     setResult(null);
     try {
-      const data = await runFactCheck({ text: input.text, file: input.file ?? undefined });
+      const data = await callEndpoint({
+        rawText: input.text,
+        pdf: input.file !== null,
+        pdfFile: input.file
+      });
       setResult(data);
-    } catch (e) {
-      // Backend not connected yet — show demo data so the UI is reviewable.
-      console.warn("[Shocheton] backend unavailable, showing mock result:", e);
-      setError("Backend not connected — showing demo result.");
-      setResult(buildMockResult({ text: input.text, file: input.file ?? undefined }));
+    } catch (e: any) {
+      const backendErrorMessage = e?.message || "Backend disconnected.";
+      console.warn("[Shocheton] Error calling verification engine:", backendErrorMessage);
+      
+      setError(`${backendErrorMessage} — Loading local preview data.`);
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div className="relative min-h-screen">
       <div className="absolute inset-0 grid-bg pointer-events-none" />

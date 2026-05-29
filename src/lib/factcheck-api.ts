@@ -1,114 +1,83 @@
-// API client for the Shocheton fact-checker backend.
-// Backend lives in a separate repo. Override base URL via VITE_FACTCHECK_API_URL.
-// Endpoints expected: POST /agent1, POST /agent2, POST /moderator
+export const API_BASE_URL = "http://localhost:8080/api/v1/verify"
 
-export const API_BASE_URL = (import.meta.env.VITE_FACTCHECK_API_URL as string | undefined) ?? "";
-
-export type Verdict = "true" | "false" | "misleading" | "unverified";
-
-export interface AgentResponse {
-  agent: string;
-  stance: "support" | "refute" | "neutral";
-  confidence: number; // 0-1
-  reasoning: string;
-  sources: { title: string; url: string; snippet?: string }[];
+export interface EvidenceSource {
+  title: string;
+  url: string | null;
+  origin: "General Web Search" | "Trusted db Scoped Search" | null;
+  credibility_percentage: number;
+  extracted_snippet: string;
 }
 
-export interface ModeratorResponse {
-  verdict: Verdict;
-  confidence: number; // 0-1
-  summary: string;
-  scores: {
-    factuality: number;
-    sourceQuality: number;
-    consensus: number;
-  };
-  sources: { title: string; url: string; snippet?: string }[];
+export interface ModelPerspectiveMapped {
+  verdict: "Supported" | "Refuted" | "Conflicting";
+  confidence_score: number | null;
+  rationale: string;
+  cited_sources: EvidenceSource[];
 }
 
-export interface FactCheckResult {
-  agent1: AgentResponse;
-  agent2: AgentResponse;
-  moderator: ModeratorResponse;
+export interface DebateMessage {
+  speaker: string;
+  content: string;
 }
 
-async function callEndpoint<T>(path: string, body: FormData | object): Promise<T> {
-  const isForm = body instanceof FormData;
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
-    headers: isForm ? undefined : { "Content-Type": "application/json" },
-    body: isForm ? body : JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`${path} failed: ${res.status} ${res.statusText}`);
-  return res.json() as Promise<T>;
+export interface BackendAgentState {
+  raw_input_text: string;
+  isolated_claim: string | null;
+  category: "general" | "finance" | "tech" | "legal" | "medical";
+  retrieved_evidence: EvidenceSource[];
+  agent1_perspective: ModelPerspectiveMapped | null;
+  agent2_perspective: ModelPerspectiveMapped | null;
+  debate_transcript: DebateMessage[];
+  final_verdict: "Supported" | "Refuted" | "Conflicting" | null;
+  final_justification: string | null;
+  system_confidence: number;
+  final_top_sources: EvidenceSource[];
+  metadata: Record<string, any>;
 }
-
 export interface FactCheckInput {
-  text?: string;
-  file?: File;
+  rawText: string,
+  pdf: boolean,
+  pdfFile: File | null
 }
-
-function buildPayload({ text, file }: FactCheckInput): FormData | object {
-  if (file) {
-    const fd = new FormData();
-    if (text) fd.append("text", text);
-    fd.append("file", file);
-    return fd;
-  }
-  return { text: text ?? "" };
-}
-
-export async function runFactCheck(input: FactCheckInput): Promise<FactCheckResult> {
-  const payload = buildPayload(input);
-  // Run both agents in parallel, then send their outputs to the moderator.
-  const [agent1, agent2] = await Promise.all([
-    callEndpoint<AgentResponse>("/agent1", payload),
-    callEndpoint<AgentResponse>("/agent2", payload),
-  ]);
-  const moderator = await callEndpoint<ModeratorResponse>("/moderator", {
-    input: (input.text && input.file) ? `${input.text} [file: ${input.file.name}]` : (input.text || (input.file ? `[file: ${input.file.name}]` : "")),
-    agent1,
-    agent2,
+const convertToBase64 = (pdfFile: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(pdfFile);
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64Clean = result.split(",")[1];
+      resolve(base64Clean);
+    };
+    reader.onerror = (error) => reject(error);
   });
-  return { agent1, agent2, moderator };
 }
-
-// Demo data so the UI is usable before the backend is wired up.
-export function buildMockResult(input: FactCheckInput): FactCheckResult {
-  const claim = input.text || input.file?.name || "Submitted claim";
-  return {
-    agent1: {
-      agent: "Agent A · Affirmative",
-      stance: "support",
-      confidence: 0.62,
-      reasoning: `Reviewed available evidence regarding: "${claim.slice(0, 120)}". Multiple reputable outlets corroborate the core assertion, though peripheral details vary.`,
-      sources: [
-        { title: "Reuters · Background report", url: "https://example.com/a1" },
-        { title: "Nature · Primary study", url: "https://example.com/a2" },
-      ],
-    },
-    agent2: {
-      agent: "Agent B · Skeptic",
-      stance: "refute",
-      confidence: 0.48,
-      reasoning:
-        "Found inconsistencies in dates and a missing primary source. The framing omits relevant context which changes the conclusion.",
-      sources: [
-        { title: "AP Fact Check", url: "https://example.com/b1" },
-        { title: "Snopes analysis", url: "https://example.com/b2" },
-      ],
-    },
-    moderator: {
-      verdict: "misleading",
-      confidence: 0.71,
-      summary:
-        "The claim contains a kernel of truth but omits crucial context, leading to a misleading overall impression. Treat with caution and consult primary sources.",
-      scores: { factuality: 0.58, sourceQuality: 0.74, consensus: 0.42 },
-      sources: [
-        { title: "Reuters", url: "https://example.com/m1" },
-        { title: "AP", url: "https://example.com/m2" },
-        { title: "Nature", url: "https://example.com/m3" },
-      ],
-    },
-  };
+export const callEndpoint = async (input: FactCheckInput) : Promise<BackendAgentState> => {
+  try {
+    let pdfContent_base64;
+    if (input.pdf && input.pdfFile) {
+      pdfContent_base64 = await convertToBase64(input.pdfFile)
+    }
+    const obj = {
+      text_input: input.rawText, 
+      pdf: input.pdf ? true : false,
+      pdfContent: pdfContent_base64 ?? null,
+    }
+    const response = await fetch(API_BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type' : 'application/json'
+      },
+      body: JSON.stringify(obj)
+    })
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.detail || "Unknown backend error");
+    }
+    const agentState = await response.json()
+    console.log(agentState)
+    return agentState as BackendAgentState
+  } catch (err) {
+    console.log(err)
+    throw err
+  }
 }
