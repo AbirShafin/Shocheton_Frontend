@@ -1,4 +1,4 @@
-export const API_BASE_URL = "http://localhost:8080/api/v1/verify"
+export const API_BASE_URL = "https://shocheton.fardays.com/api/v1/verify"
 
 export interface EvidenceSource {
   title: string;
