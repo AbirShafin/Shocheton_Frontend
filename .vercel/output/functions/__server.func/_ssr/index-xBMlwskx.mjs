@@ -411,8 +411,11 @@ function ResultsPanel({ result }) {
     ] }) })
   ] });
 }
-const DEFAULT_API_BASE_URL = "https://shocheton.fardays.com/api/v1/verify";
-const API_BASE_URL = DEFAULT_API_BASE_URL;
+const getVerifyUrl = () => {
+  {
+    throw new Error("Missing VITE_API_BASE_URL environment variable.");
+  }
+};
 const convertToBase64 = (pdfFile) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -425,33 +428,36 @@ const convertToBase64 = (pdfFile) => {
     reader.onerror = (error) => reject(error);
   });
 };
+const parseErrorMessage = async (response) => {
+  try {
+    const errData = await response.json();
+    return errData?.detail || errData?.message || `Request failed with status ${response.status}`;
+  } catch {
+    const fallbackText = await response.text().catch(() => "");
+    return fallbackText || `Request failed with status ${response.status}`;
+  }
+};
 const callEndpoint = async (input) => {
   try {
-    let pdfContent_base64;
-    if (input.pdf && input.pdfFile) {
-      pdfContent_base64 = await convertToBase64(input.pdfFile);
-    }
-    const obj = {
+    const requestBody = {
       text_input: input.rawText,
-      pdf: input.pdf ? true : false,
-      pdfContent: pdfContent_base64 ?? null
+      pdf: input.pdf
     };
-    const response = await fetch(API_BASE_URL, {
+    if (input.pdf && input.pdfFile) {
+      requestBody.pdfContent = await convertToBase64(input.pdfFile);
+    }
+    const response = await fetch(getVerifyUrl(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(obj)
+      body: JSON.stringify(requestBody)
     });
     if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.detail || "Unknown backend error");
+      throw new Error(await parseErrorMessage(response));
     }
-    const agentState = await response.json();
-    console.log(agentState);
-    return agentState;
+    return await response.json();
   } catch (err) {
-    console.log(err);
     throw err;
   }
 };
@@ -466,14 +472,14 @@ function Index() {
     try {
       const data = await callEndpoint({
         rawText: input.text,
-        pdf: input.file ? true : false,
+        pdf: Boolean(input.file),
         pdfFile: input.file
       });
       setResult(data);
     } catch (e) {
       const backendErrorMessage = e?.message || "Backend disconnected.";
       console.warn("[Shocheton] Error calling verification engine:", backendErrorMessage);
-      setError(`${backendErrorMessage} — Loading local preview data.`);
+      setError(backendErrorMessage);
     } finally {
       setLoading(false);
     }
@@ -509,9 +515,10 @@ function Index() {
           "Multi-agent debate system"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl sm:text-5xl font-display font-semibold tracking-tight text-balance", children: "Truth, adjudicated by debate." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 text-base text-muted-foreground max-w-xl mx-auto text-balance", children: "Submit a claim or a PDF. Our AI agents will process it through a multi‑agent pipeline; a moderator will return a verdict with a trust score & sources." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 text-base text-muted-foreground max-w-xl mx-auto text-balance", children: "Submit a claim or a PDF. Our AI agents will process it through a multi-agent pipeline; a moderator will return a verdict with a trust score & sources." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(FactCheckForm, { onSubmit: handleSubmit, loading }),
+      error && !loading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 rounded-lg border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/5 px-4 py-2.5 text-xs font-mono text-[color:var(--warning)]", children: error }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { mode: "wait", children: [
         loading && /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: {
           opacity: 0,
@@ -548,16 +555,13 @@ function Index() {
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono uppercase tracking-wider", children: s.label })
           ] }, s.label)) })
         ] }, "loading"),
-        result && !loading && /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: {
+        result && !loading && /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { initial: {
           opacity: 0
         }, animate: {
           opacity: 1
         }, exit: {
           opacity: 0
-        }, className: "mt-8", children: [
-          error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 rounded-lg border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/5 px-4 py-2.5 text-xs font-mono text-[color:var(--warning)]", children: error }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ResultsPanel, { result })
-        ] }, "results")
+        }, className: "mt-8", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ResultsPanel, { result }) }, "results")
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("footer", { className: "relative border-t border-border", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-6xl px-5 py-5 flex items-center justify-between text-[11px] font-mono text-muted-foreground", children: [
