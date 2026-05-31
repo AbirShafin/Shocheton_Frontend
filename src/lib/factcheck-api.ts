@@ -1,9 +1,16 @@
-const DEFAULT_API_BASE_URL = "https://shocheton.fardays.com/api/v1/verify"
-const configuredApiBaseUrl = import.meta.env.VITE_FACTCHECK_API_URL?.trim()
-export const API_BASE_URL =
-  configuredApiBaseUrl && configuredApiBaseUrl.length > 0
-    ? configuredApiBaseUrl
-    : DEFAULT_API_BASE_URL
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+
+export const API_BASE_URL = configuredApiBaseUrl ?? ""
+const VERIFY_ENDPOINT_PATH = "/api/v1/verify"
+
+const getVerifyUrl = () => {
+  if (!API_BASE_URL) {
+    throw new Error("Missing VITE_API_BASE_URL environment variable.")
+  }
+
+  const normalizedBaseUrl = API_BASE_URL.endsWith("/") ? API_BASE_URL : `${API_BASE_URL}/`
+  return new URL(VERIFY_ENDPOINT_PATH.slice(1), normalizedBaseUrl).toString()
+}
 
 export interface EvidenceSource {
   title: string;
@@ -38,12 +45,21 @@ export interface BackendAgentState {
   system_confidence: number;
   final_top_sources: EvidenceSource[];
   metadata: Record<string, any>;
+  [key: string]: unknown;
 }
+
 export interface FactCheckInput {
-  rawText: string,
-  pdf: boolean,
-  pdfFile: File | null
+  rawText: string;
+  pdf: boolean;
+  pdfFile: File | null;
 }
+
+export interface VerificationRequestBody {
+  text_input: string;
+  pdf?: boolean;
+  pdfContent?: string;
+}
+
 const convertToBase64 = (pdfFile: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -56,33 +72,39 @@ const convertToBase64 = (pdfFile: File): Promise<string> => {
     reader.onerror = (error) => reject(error);
   });
 }
-export const callEndpoint = async (input: FactCheckInput) : Promise<BackendAgentState> => {
+
+const parseErrorMessage = async (response: Response) => {
   try {
-    let pdfContent_base64;
+    const errData = await response.json();
+    return errData?.detail || errData?.message || `Request failed with status ${response.status}`;
+  } catch {
+    const fallbackText = await response.text().catch(() => "");
+    return fallbackText || `Request failed with status ${response.status}`;
+  }
+}
+
+export const callEndpoint = async (input: FactCheckInput): Promise<BackendAgentState> => {
+  try {
+    const requestBody: VerificationRequestBody = {
+      text_input: input.rawText,
+      pdf: input.pdf,
+    }
+
     if (input.pdf && input.pdfFile) {
-      pdfContent_base64 = await convertToBase64(input.pdfFile)
+      requestBody.pdfContent = await convertToBase64(input.pdfFile)
     }
-    const obj = {
-      text_input: input.rawText, 
-      pdf: input.pdf ? true : false,
-      pdfContent: pdfContent_base64 ?? null,
-    }
-    const response = await fetch(API_BASE_URL, {
-      method: 'POST',
+    const response = await fetch(getVerifyUrl(), {
+      method: "POST",
       headers: {
-        'Content-Type' : 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(obj)
+      body: JSON.stringify(requestBody),
     })
     if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.detail || "Unknown backend error");
+      throw new Error(await parseErrorMessage(response));
     }
-    const agentState = await response.json()
-    console.log(agentState)
-    return agentState as BackendAgentState
+    return (await response.json()) as BackendAgentState
   } catch (err) {
-    console.log(err)
     throw err
   }
 }

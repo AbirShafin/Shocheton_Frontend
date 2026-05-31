@@ -54,7 +54,7 @@ This frontend acts as the user-facing client for a backend orchestrator that con
 2. **Environment Variables:**
    Create a `.env` file in the root directory and add the URL for your backend API:
    ```env
-   VITE_FACTCHECK_API_URL=http://localhost:3000
+   VITE_API_BASE_URL=http://localhost:3000
    ```
 
 3. **Run the Development Server:**
@@ -79,5 +79,5 @@ This application is configured for seamless deployment on Vercel:
 4. **Important Settings:**
    - **Build Command:** `npm run build`
    - **Environment Variables:** Set `VITE_FACTCHECK_API_URL` to your production `/api/v1/verify` endpoint.
-     - If omitted, the app falls back to `https://shocheton.fardays.com/api/v1/verify`.
+   - The frontend appends `/api/v1/verify` to `VITE_API_BASE_URL`.
 5. Deploy! Vercel will automatically trigger Nitro and serve the app optimally on the Edge.

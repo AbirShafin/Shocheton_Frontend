@@ -156,26 +156,28 @@ function Index() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BackendAgentState | null>(null);
   const [error, setError] = useState<string | null>(null);
+
   const handleSubmit = async (input: { text: string; file: File | null }) => {
     setLoading(true);
     setError(null);
     setResult(null);
+
     try {
       const data = await callEndpoint({
         rawText: input.text,
-        pdf: input.file ? true : false,
-        pdfFile: input.file
+        pdf: Boolean(input.file),
+        pdfFile: input.file,
       });
       setResult(data);
     } catch (e: any) {
       const backendErrorMessage = e?.message || "Backend disconnected.";
       console.warn("[Shocheton] Error calling verification engine:", backendErrorMessage);
-      
-      setError(`${backendErrorMessage} — Loading local preview data.`);
+      setError(backendErrorMessage);
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <div className="relative min-h-screen">
       <div className="absolute inset-0 grid-bg pointer-events-none" />
@@ -213,12 +215,18 @@ function Index() {
             Truth, adjudicated by debate.
           </h1>
           <p className="mt-4 text-base text-muted-foreground max-w-xl mx-auto text-balance">
-            Submit a claim or a PDF. Our AI agents will process it through a multi‑agent pipeline; a
+            Submit a claim or a PDF. Our AI agents will process it through a multi-agent pipeline; a
             moderator will return a verdict with a trust score & sources.
           </p>
         </motion.section>
 
         <FactCheckForm onSubmit={handleSubmit} loading={loading} />
+
+        {error && !loading && (
+          <div className="mt-6 rounded-lg border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/5 px-4 py-2.5 text-xs font-mono text-[color:var(--warning)]">
+            {error}
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           {loading && (
@@ -231,9 +239,7 @@ function Index() {
             >
               <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
                 <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                <span className="font-mono uppercase tracking-wider text-xs">
-                  Agents deliberating…
-                </span>
+                <span className="font-mono uppercase tracking-wider text-xs">Agents deliberating…</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
@@ -264,11 +270,6 @@ function Index() {
               exit={{ opacity: 0 }}
               className="mt-8"
             >
-              {error && (
-                <div className="mb-4 rounded-lg border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/5 px-4 py-2.5 text-xs font-mono text-[color:var(--warning)]">
-                  {error}
-                </div>
-              )}
               <ResultsPanel result={result} />
             </motion.div>
           )}
