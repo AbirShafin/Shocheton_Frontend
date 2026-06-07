@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "https://shocheton.fardays.com/api/v1/verify"
+const DEFAULT_API_BASE_URL = "https://shochapi.fardays.com/api/v1/verify"
 const configuredApiBaseUrl = import.meta.env.VITE_FACTCHECK_API_URL?.trim()
 export const API_BASE_URL =
   configuredApiBaseUrl && configuredApiBaseUrl.length > 0
