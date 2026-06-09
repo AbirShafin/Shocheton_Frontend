@@ -1,10 +1,4 @@
 const DEFAULT_API_BASE_URL = "https://shochapi.fardays.com/api/v1/verify"
-const configuredApiBaseUrl = import.meta.env.VITE_FACTCHECK_API_URL?.trim()
-export const API_BASE_URL =
-  configuredApiBaseUrl && configuredApiBaseUrl.length > 0
-    ? configuredApiBaseUrl
-    : DEFAULT_API_BASE_URL
-
 export interface EvidenceSource {
   title: string;
   url: string | null;
@@ -67,7 +61,7 @@ export const callEndpoint = async (input: FactCheckInput) : Promise<BackendAgent
       pdf: input.pdf ? true : false,
       pdfContent: pdfContent_base64 ?? null,
     }
-    const response = await fetch(API_BASE_URL, {
+    const response = await fetch(DEFAULT_API_BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type' : 'application/json'
