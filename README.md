@@ -79,5 +79,5 @@ This application is configured for seamless deployment on Vercel:
 4. **Important Settings:**
    - **Build Command:** `npm run build`
    - **Environment Variables:** Set `VITE_FACTCHECK_API_URL` to your production `/api/v1/verify` endpoint.
-     - If omitted, the app falls back to `https://shocheton.fardays.com/api/v1/verify`.
+     - If omitted, the app falls back to `https://shochapi.fardays.com/api/v1/verify`.
 5. Deploy! Vercel will automatically trigger Nitro and serve the app optimally on the Edge.
