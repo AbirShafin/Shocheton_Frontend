@@ -411,8 +411,7 @@ function ResultsPanel({ result }) {
     ] }) })
   ] });
 }
-const DEFAULT_API_BASE_URL = "https://shocheton.fardays.com/api/v1/verify";
-const API_BASE_URL = DEFAULT_API_BASE_URL;
+const DEFAULT_API_BASE_URL = "https://shochapi.fardays.com/api/v1/verify";
 const convertToBase64 = (pdfFile) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -436,7 +435,7 @@ const callEndpoint = async (input) => {
       pdf: input.pdf ? true : false,
       pdfContent: pdfContent_base64 ?? null
     };
-    const response = await fetch(API_BASE_URL, {
+    const response = await fetch(DEFAULT_API_BASE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
